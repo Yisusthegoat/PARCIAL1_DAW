@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import type { Book, Category } from '../types/library'
+import { hasValidIsbnChars, LIMITS } from '../utils/validation'
 
 interface Props {
   categories: Category[]
@@ -21,10 +22,15 @@ export function BookForm({ categories, initial, onSubmit, onCancel }: Props) {
     const nextErrors: Record<string, string> = {}
     const parsedStock = Number(stock)
     if (!title.trim()) nextErrors.title = 'Campo obligatorio.'
+    else if (title.trim().length > LIMITS.bookTitleMax) nextErrors.title = `Maximo ${LIMITS.bookTitleMax} caracteres.`
     if (!author.trim()) nextErrors.author = 'Campo obligatorio.'
+    else if (author.trim().length > LIMITS.authorMax) nextErrors.author = `Maximo ${LIMITS.authorMax} caracteres.`
     if (!isbn.trim()) nextErrors.isbn = 'Campo obligatorio.'
+    else if (isbn.trim().length > LIMITS.isbnMax) nextErrors.isbn = `Maximo ${LIMITS.isbnMax} caracteres.`
+    else if (!hasValidIsbnChars(isbn)) nextErrors.isbn = 'Use solo numeros, X y guiones.'
     if (!categoryId) nextErrors.categoryId = 'Seleccione una categoria.'
     if (!Number.isInteger(parsedStock) || parsedStock < 0) nextErrors.stock = 'Ingrese un entero mayor o igual que cero.'
+    else if (parsedStock > LIMITS.stockMax) nextErrors.stock = `Maximo ${LIMITS.stockMax}.`
     setErrors(nextErrors)
     if (Object.keys(nextErrors).length > 0) return
     const payload = { title, author, isbn, categoryId, stock: parsedStock }
@@ -39,11 +45,11 @@ export function BookForm({ categories, initial, onSubmit, onCancel }: Props) {
 
   return (
     <form className="form-grid" onSubmit={submit}>
-      <label>Titulo<input value={title} onChange={(event) => setTitle(event.target.value)} />{errors.title && <span>{errors.title}</span>}</label>
-      <label>Autor<input value={author} onChange={(event) => setAuthor(event.target.value)} />{errors.author && <span>{errors.author}</span>}</label>
-      <label>ISBN<input value={isbn} onChange={(event) => setIsbn(event.target.value)} />{errors.isbn && <span>{errors.isbn}</span>}</label>
+      <label>Titulo<input maxLength={LIMITS.bookTitleMax} value={title} onChange={(event) => setTitle(event.target.value)} />{errors.title && <span>{errors.title}</span>}</label>
+      <label>Autor<input maxLength={LIMITS.authorMax} value={author} onChange={(event) => setAuthor(event.target.value)} />{errors.author && <span>{errors.author}</span>}</label>
+      <label>ISBN<input maxLength={LIMITS.isbnMax} pattern="[0-9Xx-]+" value={isbn} onChange={(event) => setIsbn(event.target.value)} />{errors.isbn && <span>{errors.isbn}</span>}</label>
       <label>Categoria<select value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select>{errors.categoryId && <span>{errors.categoryId}</span>}</label>
-      <label>Stock<input type="number" min="0" step="1" value={stock} onChange={(event) => setStock(event.target.value)} />{errors.stock && <span>{errors.stock}</span>}</label>
+      <label>Stock<input type="number" min="0" max={LIMITS.stockMax} step="1" value={stock} onChange={(event) => setStock(event.target.value)} />{errors.stock && <span>{errors.stock}</span>}</label>
       <div className="form-actions">
         <button type="submit">{initial ? 'Guardar cambios' : 'Registrar libro'}</button>
         {onCancel && <button className="ghost" type="button" onClick={onCancel}>Cancelar</button>}

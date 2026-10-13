@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Notice } from '../components/Notice'
 import { useLibrary } from '../context/useLibrary'
+import { LIMITS } from '../utils/validation'
 
 export function CategoriesPage() {
   const { state, addCategory, updateCategory, deleteCategory } = useLibrary()
@@ -24,7 +25,7 @@ export function CategoriesPage() {
       <section className="panel">
         <h2>Registrar categoria</h2>
         <form className="inline-form" onSubmit={submit}>
-          <label>Nombre<input value={name} onChange={(event) => setName(event.target.value)} />{!name.trim() && <span>Campo obligatorio.</span>}</label>
+          <label>Nombre<input maxLength={LIMITS.categoryNameMax} value={name} onChange={(event) => setName(event.target.value)} />{!name.trim() && <span>Campo obligatorio.</span>}</label>
           <button type="submit">Registrar</button>
         </form>
       </section>
@@ -33,7 +34,7 @@ export function CategoriesPage() {
         <div className="table-wrap"><table><thead><tr><th>Categoria</th><th>Acciones</th></tr></thead><tbody>
           {state.categories.map((category) => (
             <tr key={category.id}>
-              <td>{editingId === category.id ? <input value={editingName} onChange={(event) => setEditingName(event.target.value)} /> : category.name}</td>
+              <td>{editingId === category.id ? <input maxLength={LIMITS.categoryNameMax} value={editingName} onChange={(event) => setEditingName(event.target.value)} /> : category.name}</td>
               <td className="actions">
                 {editingId === category.id ? (
                   <>

@@ -2,6 +2,17 @@
 
 Aplicacion local para una evaluacion parcial de Desarrollo de Aplicaciones Web. Usa React, Vite, TypeScript, React Router, Local Storage y jsPDF.
 
+## Equipo de trabajo
+
+Examen elaborado en equipo de 4 estudiantes usando GitHub para la organizacion del proyecto.
+
+| Estudiante | Backlog desarrollado |
+| --- | --- |
+| CASTILLO LAVADO FAVIO SAMIR | Implementacion del modulo administrador de categorias y libros: formularios, listado, edicion, eliminacion, validaciones de duplicados, restricciones de stock e integracion con Local Storage. |
+| NAHUINRIPA ZAMUDIO JESUS | Implementacion del acceso tipo intranet, rutas protegidas, layout institucional UNCP, navegacion por rol y gestion de sesion local para administrador y usuario registrado. |
+| SAMANIEGO QUISPE DEIVID | Implementacion del modulo de usuarios: registro, edicion, eliminacion, usuario y contrasena, validaciones de correo, codigo universitario, usuario duplicado y restricciones de campos. |
+| HUAYTA HINOJOSA HENRY | Implementacion del catalogo, solicitud de prestamos, historial, devoluciones, comprobante digital, generacion PDF con jsPDF y actualizacion coherente de stock. |
+
 ## Instalacion y ejecucion
 
 ```bash
@@ -65,7 +76,7 @@ Los datos solo se inicializan si no existe almacenamiento previo en Local Storag
 - `/acceso`: login tipo intranet y credenciales demo.
 - `/admin/categorias`: CRUD de categorias.
 - `/admin/libros`: CRUD de libros.
-- `/admin/usuarios`: registro y listado de usuarios.
+- `/admin/usuarios`: registro, edicion, eliminacion y listado de usuarios.
 - `/admin/prestamos`: listado general y registro de devoluciones.
 - `/catalogo`: busqueda, filtros y solicitud de prestamos.
 - `/mis-prestamos`: prestamos activos del usuario autenticado.
@@ -77,7 +88,7 @@ Los datos solo se inicializan si no existe almacenamiento previo en Local Storag
 | Criterio | Paginas y funcionalidades |
 | --- | --- |
 | Gestion de categorias y libros | `/admin/categorias` y `/admin/libros`: registrar, listar, editar, eliminar, validar duplicados, stock, categoria existente y bloqueos por uso o prestamos activos. |
-| Gestion de usuarios | `/admin/usuarios`: registrar usuarios con usuario y contrasena, validar correo, campos obligatorios, codigo universitario duplicado y usuario de acceso duplicado. |
+| Gestion de usuarios | `/admin/usuarios`: registrar, editar y eliminar usuarios con usuario y contrasena, validar correo, campos obligatorios, codigo universitario duplicado y usuario de acceso duplicado. No elimina usuarios con prestamos registrados. |
 | Solicitud y prestamo de libros | `/catalogo` y `/mis-prestamos`: busqueda por titulo, filtro por categoria, estados de stock, solicitud de prestamo y descuento de inventario. |
 | Comprobante digital | `/comprobante/:id`: comprobante en pantalla, persistencia en Local Storage y descarga PDF real con jsPDF. |
 | Historial de prestamos | `/historial` y `/admin/prestamos`: historial por usuario, prestamos activos, devoluciones, fechas reales y control para no devolver dos veces. |
@@ -87,7 +98,7 @@ Los datos solo se inicializan si no existe almacenamiento previo en Local Storag
 1. Abra `/acceso` y entre como administrador con `admin` / `admin123`.
 2. Vaya a `/admin/categorias`, registre una categoria, edite su nombre y recargue para comprobar persistencia.
 3. Vaya a `/admin/libros`, registre un libro con la categoria creada, edite sus datos y recargue.
-4. Vaya a `/admin/usuarios`, registre un usuario con usuario/contrasena y luego intente registrar otro con el mismo codigo o usuario usando diferentes mayusculas o espacios.
+4. Vaya a `/admin/usuarios`, registre un usuario con usuario/contrasena, edite sus datos y luego intente registrar otro con el mismo codigo o usuario usando diferentes mayusculas o espacios.
 5. Salga, entre como usuario con `ana.torres` / `uncp2026` o con el usuario que creo el administrador, y vaya al catalogo.
 6. En `/catalogo`, busque por titulo, filtre por categoria y combine ambos filtros.
 7. Solicite un prestamo de un libro con stock. El stock debe bajar exactamente una unidad y aparecer el enlace al comprobante.

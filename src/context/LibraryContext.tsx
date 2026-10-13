@@ -3,6 +3,7 @@ import type { ActionResult, Book, LibraryState, LibraryUser, Loan, Receipt, Sess
 import { addDaysIso, LOAN_DAYS, todayIso } from '../utils/dates'
 import { loadLibrary, saveLibrary } from '../utils/storage'
 import { clean, isEmail, key } from '../utils/normalizers'
+import { hasValidIsbnChars, hasValidUsernameChars, LIMITS } from '../utils/validation'
 import { LibraryContext } from './LibraryContextObject'
 
 export interface LibraryContextValue {
@@ -19,6 +20,8 @@ export interface LibraryContextValue {
   updateBook: (book: Book) => ActionResult
   deleteBook: (id: string) => ActionResult
   addUser: (user: Omit<LibraryUser, 'id'>) => ActionResult
+  updateUser: (user: LibraryUser) => ActionResult
+  deleteUser: (id: string) => ActionResult
   requestLoan: (bookId: string) => ActionResult
   returnLoan: (loanId: string) => ActionResult
   getReceipt: (id: string) => Receipt | undefined
@@ -64,12 +67,14 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     addCategory: (name) => {
       const cleanName = clean(name)
       if (!cleanName) return { ok: false, message: 'Ingrese el nombre de la categoria.' }
+      if (cleanName.length > LIMITS.categoryNameMax) return { ok: false, message: `La categoria no debe superar ${LIMITS.categoryNameMax} caracteres.` }
       if (state.categories.some((cat) => key(cat.name) === key(cleanName))) return { ok: false, message: 'Ya existe una categoria con ese nombre.' }
       return commit({ ...state, categories: [...state.categories, { id: uid('cat'), name: cleanName }] }, 'Categoria registrada.')
     },
     updateCategory: (id, name) => {
       const cleanName = clean(name)
       if (!cleanName) return { ok: false, message: 'Ingrese el nombre de la categoria.' }
+      if (cleanName.length > LIMITS.categoryNameMax) return { ok: false, message: `La categoria no debe superar ${LIMITS.categoryNameMax} caracteres.` }
       if (state.categories.some((cat) => cat.id !== id && key(cat.name) === key(cleanName))) return { ok: false, message: 'Ya existe una categoria con ese nombre.' }
       return commit({ ...state, categories: state.categories.map((cat) => (cat.id === id ? { ...cat, name: cleanName } : cat)) }, 'Categoria actualizada.')
     },
@@ -94,23 +99,23 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       return commit({ ...state, books: state.books.filter((book) => book.id !== id) }, 'Libro eliminado.')
     },
     addUser: (user) => {
-      const nextUser = {
-        ...user,
-        id: uid('user'),
-        fullName: clean(user.fullName),
-        universityCode: clean(user.universityCode),
-        email: clean(user.email),
-        username: clean(user.username),
-        password: user.password.trim(),
-      }
-      if (!nextUser.fullName) return { ok: false, message: 'Ingrese nombres y apellidos.' }
-      if (!nextUser.universityCode) return { ok: false, message: 'Ingrese el codigo universitario.' }
-      if (!isEmail(nextUser.email)) return { ok: false, message: 'Ingrese un correo electronico valido.' }
-      if (!nextUser.username) return { ok: false, message: 'Ingrese el usuario de acceso.' }
-      if (!nextUser.password) return { ok: false, message: 'Ingrese la contrasena de acceso.' }
-      if (state.users.some((item) => key(item.universityCode) === key(nextUser.universityCode))) return { ok: false, message: 'Ya existe un usuario con ese codigo universitario.' }
-      if (state.users.some((item) => key(item.username) === key(nextUser.username))) return { ok: false, message: 'Ya existe un usuario de acceso con ese nombre.' }
+      const nextUser = normalizeUser({ ...user, id: uid('user') })
+      const validation = validateUser(nextUser, state)
+      if (!validation.ok) return validation
       return commit({ ...state, users: [...state.users, nextUser] }, 'Usuario registrado.', nextUser.id)
+    },
+    updateUser: (user) => {
+      const nextUser = normalizeUser(user)
+      const validation = validateUser(nextUser, state, user.id)
+      if (!validation.ok) return validation
+      return commit({
+        ...state,
+        users: state.users.map((item) => (item.id === user.id ? nextUser : item)),
+      }, 'Usuario actualizado.')
+    },
+    deleteUser: (id) => {
+      if (state.loans.some((loan) => loan.userId === id)) return { ok: false, message: 'No se puede eliminar un usuario con prestamos registrados.' }
+      return commit({ ...state, users: state.users.filter((user) => user.id !== id) }, 'Usuario eliminado.')
     },
     requestLoan: (bookId) => {
       if (session.role !== 'user' || !session.userId) return { ok: false, message: 'Debe seleccionar un usuario registrado.' }
@@ -162,12 +167,45 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
   return <LibraryContext.Provider value={value}>{children}</LibraryContext.Provider>
 }
 
+function normalizeUser(user: LibraryUser): LibraryUser {
+  return {
+    ...user,
+    fullName: clean(user.fullName),
+    universityCode: clean(user.universityCode),
+    email: clean(user.email),
+    username: clean(user.username),
+    password: user.password.trim(),
+  }
+}
+
+function validateUser(user: LibraryUser, state: LibraryState, editingId?: string): ActionResult {
+  if (!user.fullName) return { ok: false, message: 'Ingrese nombres y apellidos.' }
+  if (!user.universityCode) return { ok: false, message: 'Ingrese el codigo universitario.' }
+  if (!isEmail(user.email)) return { ok: false, message: 'Ingrese un correo electronico valido.' }
+  if (!user.username) return { ok: false, message: 'Ingrese el usuario de acceso.' }
+  if (!user.password) return { ok: false, message: 'Ingrese la contrasena de acceso.' }
+  if (user.fullName.length > LIMITS.fullNameMax) return { ok: false, message: `El nombre no debe superar ${LIMITS.fullNameMax} caracteres.` }
+  if (user.universityCode.length > LIMITS.universityCodeMax) return { ok: false, message: `El codigo no debe superar ${LIMITS.universityCodeMax} caracteres.` }
+  if (user.email.length > LIMITS.emailMax) return { ok: false, message: `El correo no debe superar ${LIMITS.emailMax} caracteres.` }
+  if (user.username.length < LIMITS.usernameMin || user.username.length > LIMITS.usernameMax) return { ok: false, message: `El usuario debe tener entre ${LIMITS.usernameMin} y ${LIMITS.usernameMax} caracteres.` }
+  if (!hasValidUsernameChars(user.username)) return { ok: false, message: 'El usuario solo puede usar letras, numeros, punto, guion y guion bajo.' }
+  if (user.password.length < LIMITS.passwordMin || user.password.length > LIMITS.passwordMax) return { ok: false, message: `La contrasena debe tener entre ${LIMITS.passwordMin} y ${LIMITS.passwordMax} caracteres.` }
+  if (state.users.some((item) => item.id !== editingId && key(item.universityCode) === key(user.universityCode))) return { ok: false, message: 'Ya existe un usuario con ese codigo universitario.' }
+  if (state.users.some((item) => item.id !== editingId && key(item.username) === key(user.username))) return { ok: false, message: 'Ya existe un usuario de acceso con ese nombre.' }
+  return { ok: true, message: 'Valido.' }
+}
+
 function validateBook(book: Book, state: LibraryState, editingId?: string): ActionResult {
   if (!book.title) return { ok: false, message: 'Ingrese el titulo.' }
   if (!book.author) return { ok: false, message: 'Ingrese el autor.' }
   if (!book.isbn) return { ok: false, message: 'Ingrese el ISBN.' }
+  if (book.title.length > LIMITS.bookTitleMax) return { ok: false, message: `El titulo no debe superar ${LIMITS.bookTitleMax} caracteres.` }
+  if (book.author.length > LIMITS.authorMax) return { ok: false, message: `El autor no debe superar ${LIMITS.authorMax} caracteres.` }
+  if (book.isbn.length > LIMITS.isbnMax) return { ok: false, message: `El ISBN no debe superar ${LIMITS.isbnMax} caracteres.` }
+  if (!hasValidIsbnChars(book.isbn)) return { ok: false, message: 'El ISBN solo puede contener numeros, X y guiones.' }
   if (!state.categories.some((cat) => cat.id === book.categoryId)) return { ok: false, message: 'Seleccione una categoria existente.' }
   if (!Number.isInteger(book.stock) || book.stock < 0) return { ok: false, message: 'El stock debe ser un entero mayor o igual que cero.' }
+  if (book.stock > LIMITS.stockMax) return { ok: false, message: `El stock no debe superar ${LIMITS.stockMax}.` }
   if (state.books.some((item) => item.id !== editingId && key(item.isbn) === key(book.isbn))) return { ok: false, message: 'Ya existe un libro con ese ISBN.' }
   return { ok: true, message: 'Valido.' }
 }
